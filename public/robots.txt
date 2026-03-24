@@ -1,0 +1,44 @@
+# DesignForge360 — robots.txt
+# https://designforge360.in
+
+User-agent: *
+Allow: /
+
+# Private / auth-required pages — no crawl value
+Disallow: /profile
+Disallow: /signin
+Disallow: /community/my-apps
+Disallow: /community/chat
+Disallow: /community/moderation
+
+# Internal API — never crawl
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://designforge360.in/sitemap.xml
+
+# ── Per-bot crawl budgets ──────────────────────────────────────────────────
+User-agent: Googlebot
+Allow: /
+Disallow: /profile
+Disallow: /signin
+Disallow: /community/my-apps
+Disallow: /community/chat
+Disallow: /community/moderation
+Disallow: /api/
+
+User-agent: Bingbot
+Allow: /
+Disallow: /profile
+Disallow: /signin
+Disallow: /community/my-apps
+Disallow: /community/chat
+Disallow: /community/moderation
+Disallow: /api/
+Crawl-delay: 5
+
+User-agent: AhrefsBot
+Crawl-delay: 10
+
+User-agent: SemrushBot
+Crawl-delay: 10

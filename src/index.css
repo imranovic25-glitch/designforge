@@ -1,0 +1,283 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  :root {
+    --bg-base: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-surface-hover: #141414;
+    --ink-primary: #ffffff;
+    --ink-secondary: #a1a1aa;
+    --ink-tertiary: #52525b;
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.2);
+    --accent-glow: rgba(255, 255, 255, 0.15);
+  }
+
+  /* Light mode (toggle via documentElement.dataset.theme = "light") */
+  :root[data-theme="light"] {
+    --bg-base: #ffffff;
+    --bg-surface: #f7f7f8;
+    --bg-surface-hover: #efeff1;
+    --ink-primary: #0a0a0a;
+    --ink-secondary: #3f3f46;
+    --ink-tertiary: #71717a;
+    --border-subtle: rgba(0, 0, 0, 0.08);
+    --border-strong: rgba(0, 0, 0, 0.14);
+    --accent-glow: rgba(0, 0, 0, 0.08);
+  }
+
+  /*
+    NOTE: Most UI currently uses explicit Tailwind colors like bg-black/text-white.
+    To make the theme toggle work without rewriting the whole design system,
+    we invert the rendered page in light mode and re-invert media.
+  */
+  :root[data-theme="light"] body {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  :root[data-theme="light"] img,
+  :root[data-theme="light"] video,
+  :root[data-theme="light"] iframe,
+  :root[data-theme="light"] canvas,
+  :root[data-theme="light"] .preserve-dark {
+    filter: invert(1) hue-rotate(180deg);
+  }
+
+  /* PDF Editor: re-invert the whole editor so it keeps its light design */
+  :root[data-theme="light"] .pdf-editor-root {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  /* Cancel the double-inversion for canvas/img inside the PDF editor */
+  :root[data-theme="light"] .pdf-editor-root canvas,
+  :root[data-theme="light"] .pdf-editor-root img {
+    filter: none;
+  }
+
+  body {
+    @apply bg-[var(--bg-base)] text-[var(--ink-primary)] font-sans antialiased selection:bg-white/30 selection:text-white;
+    font-synthesis: none;
+    text-rendering: optimizeLegibility;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* ═══ pdfjs TextLayer (used in PDF editor) ═══ */
+.textLayer {
+  position: absolute;
+  text-align: initial;
+  inset: 0;
+  overflow: clip;
+  opacity: 1;
+  line-height: 1;
+  -webkit-text-size-adjust: none;
+  text-size-adjust: none;
+  forced-color-adjust: none;
+  transform-origin: 0 0;
+  caret-color: CanvasText;
+  z-index: 0;
+  --min-font-size: 1;
+  --text-scale-factor: calc(var(--total-scale-factor) * var(--min-font-size));
+  --min-font-size-inv: calc(1 / var(--min-font-size));
+}
+.textLayer :is(span, br) {
+  color: transparent;
+  position: absolute;
+  white-space: pre;
+  cursor: text;
+  transform-origin: 0% 0%;
+}
+.textLayer > :not(.markedContent),
+.textLayer .markedContent span:not(.markedContent) {
+  z-index: 1;
+  --font-height: 0;
+  font-size: calc(var(--text-scale-factor) * var(--font-height));
+  --scale-x: 1;
+  --rotate: 0deg;
+  transform: rotate(var(--rotate)) scaleX(var(--scale-x)) scale(var(--min-font-size-inv));
+}
+.textLayer .markedContent {
+  display: contents;
+}
+/* In editText mode, highlight spans on hover */
+.textLayer.editMode span {
+  cursor: pointer;
+}
+.textLayer.editMode span:hover {
+  background-color: rgba(66, 133, 244, 0.18);
+  border-radius: 2px;
+  cursor: pointer;
+}
+.textLayer.editMode span {
+  cursor: pointer;
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/[0.02] backdrop-blur-xl border border-[var(--border-subtle)] shadow-[0_8px_32px_rgba(0,0,0,0.4)];
+  }
+  
+  .premium-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50;
+  }
+
+  .premium-glow {
+    box-shadow: 0 0 80px -20px var(--accent-glow);
+  }
+
+  /* Finance green glass panel override */
+  .glass-panel-finance {
+    @apply bg-emerald-950/20 backdrop-blur-xl border border-emerald-500/10 shadow-[0_8px_32px_rgba(0,0,0,0.4)];
+  }
+}
+
+/* ── Animations ──────────────────────────────────────────────────────── */
+
+/* Finance atmosphere: flowing highlight band */
+@keyframes flowGradient {
+  0% { background-position: 0% 0%; }
+  50% { background-position: 100% 100%; }
+  100% { background-position: 0% 0%; }
+}
+
+.animate-flow-gradient {
+  animation: flowGradient 8s ease-in-out infinite;
+}
+
+/* Finance atmosphere: soft pulsing orbs */
+.animate-pulse-slow {
+  animation: orbPulse 6s ease-in-out infinite;
+}
+
+.animate-pulse-slow-delayed {
+  animation: orbPulse 6s ease-in-out 3s infinite;
+}
+
+@keyframes orbPulse {
+  0%, 100% { opacity: 0.5; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.05); }
+}
+
+/* Reduce all decorative motion when user prefers it */
+@media (prefers-reduced-motion: reduce) {
+  .animate-pulse-slow,
+  .animate-pulse-slow-delayed,
+  .animate-flow-gradient,
+  .liquid-drop-float,
+  .liquid-ripple-expand {
+    animation: none !important;
+  }
+}
+
+/* Hide navbar during logo intro to prevent it showing through the overlay */
+body[data-intro] header {
+  visibility: hidden !important;
+}
+
+/* ── Community scrollbar styles ──────────────────────────────────────── */
+
+.community-scroll {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+.community-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+.community-scroll::-webkit-scrollbar-track {
+  background: transparent;
+}
+.community-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 3px;
+}
+.community-scroll::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+/* Heart burst particles */
+@keyframes heartBurst {
+  0% { transform: scale(0); opacity: 1; }
+  50% { opacity: 1; }
+  100% { transform: scale(1.8); opacity: 0; }
+}
+.heart-burst {
+  animation: heartBurst 0.5s ease-out forwards;
+}
+
+/* Like pop */
+@keyframes likePop {
+  0% { transform: scale(1); }
+  30% { transform: scale(1.35); }
+  60% { transform: scale(0.9); }
+  100% { transform: scale(1); }
+}
+.like-pop {
+  animation: likePop 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+/* Coffee shimmer */
+@keyframes coffeeShimmer {
+  0% { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+/* ── Liquid hero animations ──────────────────────────────────────────── */
+
+@keyframes liquidDropFloat {
+  0%   { transform: translate(0, 0) scale(1)   rotate(0deg); }
+  25%  { transform: translate(30px, -40px) scale(1.12) rotate(4deg); }
+  50%  { transform: translate(-20px, 20px) scale(0.92) rotate(-3deg); }
+  75%  { transform: translate(15px, 30px) scale(1.06) rotate(2deg); }
+  100% { transform: translate(0, 0) scale(1)   rotate(0deg); }
+}
+
+.liquid-drop-float {
+  animation: liquidDropFloat 9s ease-in-out infinite;
+}
+
+@keyframes liquidRippleExpand {
+  0% {
+    transform: scale(0.3);
+    opacity: var(--ripple-opacity, 0.12);
+  }
+  70% {
+    opacity: calc(var(--ripple-opacity, 0.12) * 0.3);
+  }
+  100% {
+    transform: scale(var(--ripple-scale, 2));
+    opacity: 0;
+  }
+}
+
+.liquid-ripple-expand {
+  animation: liquidRippleExpand 2.5s cubic-bezier(0.16, 1, 0.3, 1) infinite;
+}
+
+/* Shimmer pass for hero heading */
+@keyframes liquidShimmer {
+  0%   { background-position: -200% center; }
+  100% { background-position: 200% center; }
+}
+
+.liquid-shimmer-text {
+  background: linear-gradient(
+    90deg,
+    rgba(255,255,255,0.5) 0%,
+    rgba(255,255,255,1) 15%,
+    rgba(180,200,255,0.95) 30%,
+    rgba(200,160,255,0.9) 50%,
+    rgba(255,255,255,1) 70%,
+    rgba(255,255,255,0.5) 100%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: liquidShimmer 3.5s linear infinite;
+}

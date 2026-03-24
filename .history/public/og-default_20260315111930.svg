@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <defs>
+    <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0a0a0a"/>
+      <stop offset="100%" style="stop-color:#111111"/>
+    </linearGradient>
+    <radialGradient id="g1" cx="20%" cy="30%" r="50%">
+      <stop offset="0%" style="stop-color:#8b5cf6;stop-opacity:0.15"/>
+      <stop offset="100%" style="stop-color:transparent;stop-opacity:0"/>
+    </radialGradient>
+    <radialGradient id="g2" cx="80%" cy="70%" r="40%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:0.1"/>
+      <stop offset="100%" style="stop-color:transparent;stop-opacity:0"/>
+    </radialGradient>
+  </defs>
+  <rect width="1200" height="630" fill="url(#bg)"/>
+  <rect width="1200" height="630" fill="url(#g1)"/>
+  <rect width="1200" height="630" fill="url(#g2)"/>
+  <rect x="0" y="0" width="1200" height="4" fill="#8b5cf6" opacity="0.6"/>
+  <!-- Logo circle -->
+  <circle cx="600" cy="240" r="50" fill="none" stroke="#ffffff" stroke-width="3" opacity="0.9"/>
+  <circle cx="600" cy="240" r="8" fill="#ffffff" opacity="0.9"/>
+  <!-- Title -->
+  <text x="600" y="350" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="52" font-weight="700" fill="#ffffff" letter-spacing="-1">DesignForge360</text>
+  <!-- Subtitle -->
+  <text x="600" y="400" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="24" fill="#ffffff" opacity="0.5" font-weight="300">Free Online Tools for PDF, Image, Finance &amp; More</text>
+  <!-- Domain -->
+  <text x="600" y="560" text-anchor="middle" font-family="system-ui,-apple-system,sans-serif" font-size="18" fill="#8b5cf6" opacity="0.7" letter-spacing="2">www.designforge360.com</text>
+</svg>

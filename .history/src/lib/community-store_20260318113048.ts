@@ -1,0 +1,728 @@
+import { supabase } from "./supabase";
+import type {
+  AppSubmission,
+  AppFeedback,
+  FeedbackReply,
+  ChatThread,
+  ChatMessage,
+  CommunityMember,
+  FlaggedMessage,
+  ModerationLogEntry,
+  Platform,
+  AppCategory,
+  SortOption,
+  ListingType,
+} from "./community-types";
+
+const PAGE_SIZE = 20;
+
+/* ───────── Submissions ───────── */
+
+export async function getSubmissions(opts: {
+  page?: number;
+  platform?: Platform | "all";
+  category?: AppCategory | "all";
+  sort?: SortOption;
+  search?: string;
+}): Promise<{ data: AppSubmission[]; hasMore: boolean }> {
+  const { page = 0, platform = "all", category = "all", sort = "newest", search } = opts;
+
+  let query = supabase
+    .from("app_submissions")
+    .select("*")
+    .eq("status", "active");
+
+  if (platform !== "all") query = query.eq("platform", platform);
+  if (category !== "all") query = query.eq("category", category);
+  if (search && search.trim()) query = query.ilike("title", `%${search.trim()}%`);
+
+  // Pinned posts always appear first
+  query = query.order("is_pinned", { ascending: false, nullsFirst: true });
+
+  switch (sort) {
+    case "most-upvoted":
+      query = query.order("upvotes", { ascending: false });
+      break;
+    case "most-feedback":
+      query = query.order("feedback_count", { ascending: false });
+      break;
+    case "most-liked":
+      query = query.order("like_count", { ascending: false });
+      break;
+    case "most-loved":
+      query = query.order("love_count", { ascending: false });
+      break;
+    default:
+      query = query.order("created_at", { ascending: false });
+  }
+
+  query = query.range(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+
+  const { data, error } = await query;
+  if (error) {
+    console.error("Failed to fetch submissions:", error.message);
+    return { data: [], hasMore: false };
+  }
+  return { data: data ?? [], hasMore: (data?.length ?? 0) > PAGE_SIZE };
+}
+
+export async function getSubmissionById(id: string): Promise<AppSubmission | null> {
+  const { data, error } = await supabase
+    .from("app_submissions")
+    .select("*")
+    .eq("id", id)
+    .single();
+
+  if (error) {
+    console.error("Failed to fetch submission:", error.message);
+    return null;
+  }
+  return data;
+}
+
+export async function getUserSubmissions(userId: string): Promise<AppSubmission[]> {
+  const { data, error } = await supabase
+    .from("app_submissions")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch user submissions:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+export async function createSubmission(submission: {
+  title: string;
+  description: string;
+  app_url: string;
+  listing_type: ListingType;
+  platform: Platform;
+  category: AppCategory;
+  screenshot_url?: string | null;
+  tester_slots: number;
+  user_name: string;
+  user_avatar: string | null;
+}): Promise<AppSubmission | null> {
+  const { data, error } = await supabase.rpc("create_submission_with_repos", {
+    p_title: submission.title,
+    p_description: submission.description,
+    p_app_url: submission.app_url,
+    p_listing_type: submission.listing_type,
+    p_platform: submission.platform,
+    p_category: submission.category,
+    p_screenshot_url: submission.screenshot_url ?? null,
+    p_user_name: submission.user_name,
+    p_user_avatar: submission.user_avatar,
+  });
+
+  if (error || !data) {
+    console.error("Failed to create submission:", error?.message ?? "No data");
+    return null;
+  }
+
+  return data as AppSubmission;
+}
+
+export async function updateSubmissionStatus(
+  id: string,
+  status: "active" | "closed"
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("app_submissions")
+    .update({ status, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  return !error;
+}
+
+export async function updateSubmission(
+  id: string,
+  fields: { title?: string; description?: string; app_url?: string; listing_type?: ListingType; platform?: Platform; category?: AppCategory; screenshot_url?: string | null }
+): Promise<boolean> {
+  const { error } = await supabase
+    .from("app_submissions")
+    .update({ ...fields, updated_at: new Date().toISOString() })
+    .eq("id", id);
+
+  return !error;
+}
+
+export async function deleteSubmission(id: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("app_submissions")
+    .delete()
+    .eq("id", id);
+
+  return !error;
+}
+
+/** Admin-only: delete all submissions. Requires community_admin role. */
+export async function deleteAllSubmissions(): Promise<{ deleted: number; error?: string }> {
+  const admin = await isCommunityAdmin();
+  if (!admin) return { deleted: 0, error: "Not an admin" };
+
+  // Fetch all submission IDs first, then delete in batches
+  const { data, error: fetchError } = await supabase
+    .from("app_submissions")
+    .select("id");
+
+  if (fetchError || !data) return { deleted: 0, error: fetchError?.message ?? "Failed to fetch" };
+
+  let deleted = 0;
+  for (const row of data) {
+    const { error } = await supabase.from("app_submissions").delete().eq("id", row.id);
+    if (!error) deleted++;
+  }
+
+  return { deleted };
+}
+
+/* ───────── Feedback ───────── */
+
+export async function getFeedback(submissionId: string): Promise<AppFeedback[]> {
+  const { data, error } = await supabase
+    .from("app_feedback")
+    .select("*")
+    .eq("submission_id", submissionId)
+    .order("created_at", { ascending: false });
+
+  if (error) {
+    console.error("Failed to fetch feedback:", error.message);
+    return [];
+  }
+  return data ?? [];
+}
+
+export async function submitFeedback(feedback: {
+  submission_id: string;
+  rating: number;
+  feedback_text: string;
+  areas: string[];
+  device_info?: string | null;
+  user_name: string;
+  user_avatar: string | null;
+}): Promise<{ feedback: AppFeedback | null; awarded: number; new_balance: number; error?: string }> {
+  const { data, error } = await supabase.rpc("submit_feedback_with_repos", {
+    p_submission_id: feedback.submission_id,
+    p_rating: feedback.rating,
+    p_feedback_text: feedback.feedback_text,
+    p_areas: feedback.areas,
+    p_device_info: feedback.device_info ?? null,
+    p_user_name: feedback.user_name,
+    p_user_avatar: feedback.user_avatar,
+  });
+
+  if (error || !data) {
+    console.error("Failed to submit feedback:", error?.message ?? "No data");
+    return { feedback: null, awarded: 0, new_balance: 0, error: error?.message ?? "No data" };
+  }
+
+  // RPC returns { feedback, awarded, new_balance }
+  const payload = data as { feedback?: AppFeedback; awarded?: number; new_balance?: number };
+  return {
+    feedback: payload.feedback ?? null,
+    awarded: typeof payload.awarded === "number" ? payload.awarded : 0,
+    new_balance: typeof payload.new_balance === "number" ? payload.new_balance : 0,
+  };
+}
+
+/* ───────── Repo Credits ───────── */
+
+export async function getMyRepoBalance(): Promise<number> {
+  const { data, error } = await supabase.rpc("get_my_repo_balance");
+  if (error) return 0;
+  return typeof data === "number" ? data : 0;
+}
+
+export async function claimWelcomeRepos(): Promise<{ granted: boolean; balance: number }> {
+  const { data, error } = await supabase.rpc("claim_welcome_repos");
+  if (error || !data) return { granted: false, balance: 0 };
+  const payload = data as { granted: boolean; balance: number };
+  return { granted: Boolean(payload.granted), balance: typeof payload.balance === "number" ? payload.balance : 0 };
+}
+
+/* ───────── Referrals ───────── */
+
+export async function getMyReferralCode(): Promise<string | null> {
+  const { data, error } = await supabase.rpc("get_my_referral_code");
+  if (error || !data) return null;
+  return data as string;
+}
+
+export async function claimReferral(code: string): Promise<{ success: boolean; error?: string; referrer_awarded?: number; referred_awarded?: number }> {
+  const { data, error } = await supabase.rpc("claim_referral", { p_code: code });
+  if (error || !data) return { success: false, error: error?.message ?? "Unknown error" };
+  return data as { success: boolean; error?: string; referrer_awarded?: number; referred_awarded?: number };
+}
+
+export async function getMyReferralStats(): Promise<{ code: string | null; count: number; earned: number }> {
+  const { data, error } = await supabase.rpc("get_my_referral_stats");
+  if (error || !data) return { code: null, count: 0, earned: 0 };
+  return data as { code: string | null; count: number; earned: number };
+}
+
+/* ───────── Pin / Boost / Priority ───────── */
+
+interface FeatureResult {
+  success: boolean;
+  error?: string;
+  new_balance?: number;
+  balance?: number;
+}
+
+export async function pinSubmission(submissionId: string): Promise<FeatureResult> {
+  const { data, error } = await supabase.rpc("pin_submission", { p_submission_id: submissionId });
+  if (error || !data) return { success: false, error: error?.message ?? "Unknown error" };
+  return data as FeatureResult;
+}
+
+export async function boostSubmission(submissionId: string): Promise<FeatureResult> {
+  const { data, error } = await supabase.rpc("boost_submission", { p_submission_id: submissionId });
+  if (error || !data) return { success: false, error: error?.message ?? "Unknown error" };
+  return data as FeatureResult;
+}
+
+export async function requestPriorityReview(submissionId: string): Promise<FeatureResult> {
+  const { data, error } = await supabase.rpc("request_priority_review", { p_submission_id: submissionId });
+  if (error || !data) return { success: false, error: error?.message ?? "Unknown error" };
+  return data as FeatureResult;
+}
+
+export async function isCommunityAdmin(): Promise<boolean> {
+  const { data, error } = await supabase.rpc("is_community_admin");
+  if (error) return false;
+  return Boolean(data);
+}
+
+/* ───────── Screenshot Helpers ───────── */
+
+/** Parse the screenshot_url TEXT column which may be a JSON array or a plain URL */
+export function parseScreenshots(raw: string | null | undefined): string[] {
+  if (!raw) return [];
+  try {
+    const parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) return parsed.filter((s: unknown) => typeof s === "string" && s);
+  } catch {
+    // not JSON — treat as single URL
+  }
+  return raw.trim() ? [raw.trim()] : [];
+}
+
+/** Serialize an array of screenshot URLs into the TEXT column format */
+export function serializeScreenshots(urls: string[]): string | null {
+  const filtered = urls.filter(Boolean);
+  if (filtered.length === 0) return null;
+  if (filtered.length === 1) return filtered[0]; // backward-compat: single URL stored as plain string
+  return JSON.stringify(filtered);
+}
+
+/* ───────── Screenshot Upload ───────── */
+
+export async function uploadCommunityScreenshot(file: File): Promise<string | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) {
+    console.error("Screenshot upload: user not authenticated");
+    return null;
+  }
+
+  // Validate file type client-side
+  const allowedTypes = ["image/png", "image/jpeg", "image/webp"];
+  if (!allowedTypes.includes(file.type)) {
+    console.error("Screenshot upload: invalid file type", file.type);
+    return null;
+  }
+
+  // Validate file size (5 MB)
+  if (file.size > 5 * 1024 * 1024) {
+    console.error("Screenshot upload: file too large", file.size);
+    return null;
+  }
+
+  const ext = file.name.split(".").pop()?.toLowerCase() || "png";
+  const safeExt = /^(png|jpg|jpeg|webp)$/.test(ext) ? ext : "png";
+  const path = `${user.id}/${crypto.randomUUID()}.${safeExt}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("community-screenshots")
+    .upload(path, file, { upsert: false, contentType: file.type });
+
+  if (uploadError) {
+    console.error("Screenshot upload failed:", uploadError.message, uploadError);
+    return null;
+  }
+
+  const { data } = supabase.storage.from("community-screenshots").getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function uploadMultipleScreenshots(files: File[]): Promise<string[]> {
+  const urls: string[] = [];
+  for (const file of files) {
+    const url = await uploadCommunityScreenshot(file);
+    if (url) urls.push(url);
+  }
+  return urls;
+}
+
+/* ───────── Click Tracking ───────── */
+
+export async function trackClick(submissionId: string): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  // Use sessionStorage for anonymous session continuity
+  let sessionId = sessionStorage.getItem("df_session");
+  if (!sessionId) {
+    sessionId = Math.random().toString(36).slice(2);
+    sessionStorage.setItem("df_session", sessionId);
+  }
+  await supabase.rpc("track_app_click", {
+    p_submission_id: submissionId,
+    p_user_id: user?.id ?? null,
+    p_session: sessionId,
+  });
+}
+
+export async function getSubmissionStats(
+  submissionId: string
+): Promise<{ total_clicks: number; unique_clicks: number }> {
+  const { data, error } = await supabase.rpc("get_submission_stats", {
+    p_submission_id: submissionId,
+  });
+  if (error || !data) return { total_clicks: 0, unique_clicks: 0 };
+  return data as { total_clicks: number; unique_clicks: number };
+}
+
+export async function deleteFeedback(feedbackId: string, submissionId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("app_feedback")
+    .delete()
+    .eq("id", feedbackId);
+
+  if (!error) {
+    await supabase.rpc("decrement_feedback_count", { row_id: submissionId });
+  }
+
+  return !error;
+}
+
+/* ───────── Reports / Flags ───────── */
+
+export async function reportSubmission(submissionId: string, reason: string): Promise<boolean> {
+  const { error } = await supabase.rpc("report_submission", {
+    p_submission_id: submissionId,
+    p_reason: reason,
+  });
+  return !error;
+}
+
+/* ───────── Community Action Repo Rewards ───────── */
+
+export async function rewardCommunityAction(
+  submissionId: string,
+  action: "upvote" | "like" | "love" | "share" | "report"
+): Promise<{ awarded: number; new_balance: number }> {
+  const { data, error } = await supabase.rpc("reward_community_action", {
+    p_submission_id: submissionId,
+    p_action: action,
+  });
+
+  if (error || !data) return { awarded: 0, new_balance: 0 };
+  const payload = data as { awarded?: number; new_balance?: number };
+  return {
+    awarded: typeof payload.awarded === "number" ? payload.awarded : 0,
+    new_balance: typeof payload.new_balance === "number" ? payload.new_balance : 0,
+  };
+}
+
+/* ───────── Upvotes ───────── */
+
+export async function toggleUpvote(submissionId: string): Promise<{ upvoted: boolean; newCount: number } | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  // Atomic upvote toggle via SQL RPC
+  const { data, error } = await supabase.rpc("toggle_upvote", {
+    p_submission_id: submissionId,
+  });
+
+  if (error || !data) {
+    console.error("toggleUpvote failed:", error?.message);
+    return null;
+  }
+
+  const result = data as { upvoted: boolean; new_count: number };
+  return { upvoted: result.upvoted, newCount: result.new_count };
+}
+
+export async function getUserUpvotes(userId: string, submissionIds: string[]): Promise<Set<string>> {
+  if (!submissionIds.length) return new Set();
+
+  const { data } = await supabase
+    .from("app_upvotes")
+    .select("submission_id")
+    .eq("user_id", userId)
+    .in("submission_id", submissionIds);
+
+  return new Set((data ?? []).map((r) => r.submission_id));
+}
+
+/* ───────── Replies ───────── */
+
+export async function getReplies(feedbackIds: string[]): Promise<Record<string, FeedbackReply[]>> {
+  if (!feedbackIds.length) return {};
+  const { data, error } = await supabase
+    .from("feedback_replies")
+    .select("*")
+    .in("feedback_id", feedbackIds)
+    .order("created_at", { ascending: true });
+
+  if (error || !data) return {};
+
+  const map: Record<string, FeedbackReply[]> = {};
+  for (const reply of data as FeedbackReply[]) {
+    (map[reply.feedback_id] ??= []).push(reply);
+  }
+  return map;
+}
+
+export async function submitReply(reply: {
+  feedback_id: string;
+  reply_text: string;
+  user_name: string;
+  user_avatar: string | null;
+}): Promise<{ reply: FeedbackReply | null; awarded: number; new_balance: number }> {
+  const { data, error } = await supabase.rpc("submit_reply_with_repos", {
+    p_feedback_id: reply.feedback_id,
+    p_reply_text: reply.reply_text,
+    p_user_name: reply.user_name,
+    p_user_avatar: reply.user_avatar,
+  });
+
+  if (error || !data) {
+    console.error("Failed to submit reply:", error?.message);
+    return { reply: null, awarded: 0, new_balance: 0 };
+  }
+
+  const payload = data as { reply?: FeedbackReply; awarded?: number; new_balance?: number };
+  return {
+    reply: payload.reply ?? null,
+    awarded: typeof payload.awarded === "number" ? payload.awarded : 0,
+    new_balance: typeof payload.new_balance === "number" ? payload.new_balance : 0,
+  };
+}
+
+export async function deleteReply(replyId: string): Promise<boolean> {
+  const { error } = await supabase
+    .from("feedback_replies")
+    .delete()
+    .eq("id", replyId);
+  return !error;
+}
+
+/* ───────── Presence / Online Count ───────── */
+
+let presenceChannel: ReturnType<typeof supabase.channel> | null = null;
+
+export function subscribeToCommunityPresence(
+  userId: string | null,
+  onCountChange: (count: number) => void
+) {
+  presenceChannel = supabase.channel("community-online", {
+    config: { presence: { key: userId ?? `anon-${Math.random().toString(36).slice(2)}` } },
+  });
+
+  presenceChannel
+    .on("presence", { event: "sync" }, () => {
+      const state = presenceChannel!.presenceState();
+      onCountChange(Object.keys(state).length);
+    })
+    .subscribe(async (status) => {
+      if (status === "SUBSCRIBED") {
+        await presenceChannel!.track({ online_at: new Date().toISOString() });
+      }
+    });
+
+  return () => {
+    presenceChannel?.unsubscribe();
+    presenceChannel = null;
+  };
+}
+
+/* ───────── Chat / Direct Messages ───────── */
+
+export async function getOrCreateThread(otherUserId: string): Promise<ChatThread | null> {
+  const { data, error } = await supabase.rpc("get_or_create_chat_thread", {
+    p_other_user_id: otherUserId,
+  });
+  if (error || !data) {
+    console.error("Failed to get/create thread:", error?.message);
+    return null;
+  }
+  return data as ChatThread;
+}
+
+export async function getMyThreads(): Promise<ChatThread[]> {
+  const { data, error } = await supabase.rpc("get_my_threads_enriched");
+  if (error || !data) return [];
+  return (data as ChatThread[]) ?? [];
+}
+
+export async function getCommunityMembers(): Promise<CommunityMember[]> {
+  const { data, error } = await supabase.rpc("get_community_members");
+  if (error || !data) return [];
+  return (data as CommunityMember[]) ?? [];
+}
+
+export async function getThreadMessages(threadId: string, limit = 50): Promise<ChatMessage[]> {
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .select("*")
+    .eq("thread_id", threadId)
+    .order("created_at", { ascending: true })
+    .limit(limit);
+
+  if (error || !data) return [];
+  return data as ChatMessage[];
+}
+
+export async function sendMessage(threadId: string, text: string): Promise<ChatMessage | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from("chat_messages")
+    .insert({
+      thread_id: threadId,
+      message_text: text,
+      sender_name: user.user_metadata?.full_name ?? user.email?.split("@")[0] ?? "User",
+      sender_avatar: user.user_metadata?.avatar_url ?? null,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error("Failed to send message:", error.message);
+    return null;
+  }
+
+  // Update thread's last_message
+  await supabase
+    .from("chat_threads")
+    .update({ last_message_text: text, last_message_at: new Date().toISOString() })
+    .eq("id", threadId);
+
+  return data as ChatMessage;
+}
+
+export function subscribeToThread(
+  threadId: string,
+  onMessage: (msg: ChatMessage) => void
+) {
+  const channel = supabase
+    .channel(`chat-${threadId}`)
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "chat_messages", filter: `thread_id=eq.${threadId}` },
+      (payload) => {
+        onMessage(payload.new as ChatMessage);
+      }
+    )
+    .subscribe();
+
+  return () => {
+    channel.unsubscribe();
+  };
+}
+
+/* ───────── Moderated Chat ───────── */
+
+export async function sendModeratedMessage(
+  threadId: string,
+  text: string
+): Promise<{ message: ChatMessage | null; error?: string }> {
+  const { data, error } = await supabase.rpc("send_moderated_message", {
+    p_thread_id: threadId,
+    p_message_text: text,
+  });
+
+  if (error) {
+    // Parse structured error messages from the RPC
+    const msg = error.message ?? "";
+    if (msg.includes("validation:")) return { message: null, error: msg.split("validation:")[1] };
+    if (msg.includes("rate_limit:")) return { message: null, error: msg.split("rate_limit:")[1] };
+    if (msg.includes("blocked:")) return { message: null, error: msg.split("blocked:")[1] };
+    if (msg.includes("not_participant")) return { message: null, error: "You are not in this conversation" };
+    return { message: null, error: "Failed to send message" };
+  }
+
+  return { message: data as ChatMessage };
+}
+
+export async function reportChatMessage(
+  messageId: string,
+  reason: string
+): Promise<{ reported: boolean; error?: string }> {
+  const { data, error } = await supabase.rpc("report_chat_message", {
+    p_message_id: messageId,
+    p_reason: reason,
+  });
+
+  if (error) {
+    if (error.message?.includes("cannot_report_self")) return { reported: false, error: "You can't report your own messages" };
+    return { reported: false, error: "Failed to report message" };
+  }
+
+  return { reported: true };
+}
+
+export async function isUserBlocked(): Promise<boolean> {
+  const { data } = await supabase
+    .from("chat_blocked_users")
+    .select("id")
+    .limit(1);
+  return (data?.length ?? 0) > 0;
+}
+
+/* ───────── Admin Moderation ───────── */
+
+export async function getFlaggedMessages(): Promise<FlaggedMessage[]> {
+  const { data, error } = await supabase.rpc("get_flagged_messages");
+  if (error || !data) return [];
+  return (Array.isArray(data) ? data : []) as FlaggedMessage[];
+}
+
+export async function moderateChatMessage(
+  messageId: string,
+  action: "approve" | "flag" | "hide" | "delete",
+  reason?: string
+): Promise<boolean> {
+  const { error } = await supabase.rpc("moderate_chat_message", {
+    p_message_id: messageId,
+    p_action: action,
+    p_reason: reason ?? null,
+  });
+  return !error;
+}
+
+export async function banChatUser(userId: string, reason?: string): Promise<boolean> {
+  const { error } = await supabase.rpc("ban_chat_user", {
+    p_user_id: userId,
+    p_reason: reason ?? null,
+  });
+  return !error;
+}
+
+export async function unbanChatUser(userId: string): Promise<boolean> {
+  const { error } = await supabase.rpc("unban_chat_user", {
+    p_user_id: userId,
+  });
+  return !error;
+}
+
+export async function getModerationLog(): Promise<ModerationLogEntry[]> {
+  const { data, error } = await supabase.rpc("get_moderation_log");
+  if (error || !data) return [];
+  return (Array.isArray(data) ? data : []) as ModerationLogEntry[];
+}

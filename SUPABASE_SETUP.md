@@ -1,0 +1,256 @@
+# Supabase Setup Guide
+
+Important:
+- Supabase SQL Editor accepts SQL only. Do not paste this full Markdown file there.
+- Use the SQL-only file at [supabase/community_setup.sql](supabase/community_setup.sql), or copy only the contents inside sql code blocks.
+
+## 1. Create a Supabase Project
+
+1. Go to [supabase.com](https://supabase.com) and create a free account
+2. Create a new project
+3. Copy the **Project URL** and **anon public key** from Settings → API
+4. Add them to your `.env` file:
+   ```
+   VITE_SUPABASE_URL="https://your-project.supabase.co"
+   VITE_SUPABASE_ANON_KEY="your-anon-key-here"
+   ```
+
+## 2. Enable Google Auth
+
+1. Go to **Authentication → Providers → Google**
+2. Enable Google provider
+3. Add your Google OAuth Client ID and Secret (from [Google Cloud Console](https://console.cloud.google.com/apis/credentials))
+4. Set the redirect URL to: `https://your-project.supabase.co/auth/v1/callback`
+5. In Google Cloud Console, add this same URL as an authorized redirect URI
+
+## 3. Create the Reviews Table
+
+Go to **SQL Editor** in the Supabase dashboard and run:
+
+```sql
+-- Reviews table
+CREATE TABLE reviews (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  tool_slug TEXT NOT NULL,
+  rating SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  comment TEXT DEFAULT '' CHECK (char_length(comment) <= 1000),
+  user_name TEXT,
+  user_avatar TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (user_id, tool_slug)
+);
+
+-- Index for fast lookups by tool
+CREATE INDEX idx_reviews_tool_slug ON reviews(tool_slug);
+
+-- Enable Row Level Security
+ALTER TABLE reviews ENABLE ROW LEVEL SECURITY;
+
+-- Anyone can read reviews
+CREATE POLICY "Reviews are publicly readable"
+  ON reviews FOR SELECT
+  USING (true);
+
+-- Authenticated users can insert their own reviews
+CREATE POLICY "Users can insert their own reviews"
+  ON reviews FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can update their own reviews
+CREATE POLICY "Users can update their own reviews"
+  ON reviews FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Users can delete their own reviews
+CREATE POLICY "Users can delete their own reviews"
+  ON reviews FOR DELETE
+  USING (auth.uid() = user_id);
+```
+
+## 4. Site URL Configuration
+
+1. Go to **Authentication → URL Configuration**
+2. Set **Site URL** to your production URL: `https://designforge360.in`
+3. Add `https://designforge360.in` to **Redirect URLs**
+4. Add `http://localhost:3000` to **Redirect URLs** for local development
+
+## 5. Done!
+
+The auth + review system is now ready. Users can:
+- Sign in with Google or Email/Password
+- Leave one review per tool (upsert on re-submit)
+- Delete their own reviews
+- See all reviews on each tool page
+
+---
+
+## 6. Community (App Testers Hub) Tables
+
+Run this in the **SQL Editor** to set up the community feature:
+
+Recommended:
+- Open [supabase/community_setup.sql](supabase/community_setup.sql)
+- Copy all content from that file and run it in Supabase SQL Editor
+
+Then run the add-ons (in this order):
+- [supabase/community_add_tiers.sql](supabase/community_add_tiers.sql) (slots + click tracking)
+- [supabase/community_repos.sql](supabase/community_repos.sql) (repo credits: earn 5 per feedback, spend 15 to submit; also includes admin table + `is_community_admin()` RPC)
+- [supabase/community_storage.sql](supabase/community_storage.sql) (optional, for screenshot uploads)
+
+Admin notes:
+- You can optionally run [supabase/community_admin.sql](supabase/community_admin.sql) too (it’s included in `community_repos.sql` now).
+- Admin is not a separate “admin account” you create — it’s any normal signed-in user whose `user_id` is added to `community_admins`.
+- To make a user admin:
+  - In Supabase Dashboard → **Authentication** → **Users**, copy the user’s **ID** (UUID).
+  - Run this in SQL Editor:
+    ```sql
+    insert into community_admins (user_id)
+    values ('00000000-0000-0000-0000-000000000000')
+    on conflict (user_id) do nothing;
+    ```
+  - Sign out/in on the site (or refresh) to see admin privileges take effect.
+
+Optional (Google Group link):
+- Add to your `.env`:
+  ```
+  VITE_COMMUNITY_GOOGLE_GROUPS_URL="https://groups.google.com/g/YOUR_GROUP"
+  ```
+
+```sql
+-- ═══════════════════════════════════════════
+-- App Submissions
+-- ═══════════════════════════════════════════
+CREATE TABLE app_submissions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL CHECK (char_length(title) BETWEEN 3 AND 120),
+  description TEXT NOT NULL CHECK (char_length(description) BETWEEN 10 AND 2000),
+  app_url TEXT NOT NULL,
+  platform TEXT NOT NULL CHECK (platform IN ('android','ios','web','desktop','cross-platform')),
+  category TEXT NOT NULL CHECK (category IN ('productivity','social','finance','games','education','health','utility','entertainment','developer-tools','other')),
+  screenshot_url TEXT,
+  status TEXT DEFAULT 'active' CHECK (status IN ('active','closed')),
+  upvotes INT DEFAULT 0,
+  feedback_count INT DEFAULT 0,
+  user_name TEXT,
+  user_avatar TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE INDEX idx_app_submissions_created ON app_submissions(created_at DESC);
+CREATE INDEX idx_app_submissions_platform ON app_submissions(platform);
+CREATE INDEX idx_app_submissions_category ON app_submissions(category);
+CREATE INDEX idx_app_submissions_user ON app_submissions(user_id);
+
+ALTER TABLE app_submissions ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Submissions are publicly readable"
+  ON app_submissions FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert their own submissions"
+  ON app_submissions FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own submissions"
+  ON app_submissions FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own submissions"
+  ON app_submissions FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════
+-- App Feedback
+-- ═══════════════════════════════════════════
+CREATE TABLE app_feedback (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  submission_id UUID NOT NULL REFERENCES app_submissions(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  rating SMALLINT NOT NULL CHECK (rating >= 1 AND rating <= 5),
+  feedback_text TEXT NOT NULL CHECK (char_length(feedback_text) BETWEEN 10 AND 2000),
+  areas TEXT[] DEFAULT '{}',
+  device_info TEXT CHECK (device_info IS NULL OR char_length(device_info) <= 100),
+  user_name TEXT,
+  user_avatar TEXT,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  UNIQUE (submission_id, user_id)
+);
+
+CREATE INDEX idx_app_feedback_submission ON app_feedback(submission_id);
+
+ALTER TABLE app_feedback ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Feedback is publicly readable"
+  ON app_feedback FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert their own feedback"
+  ON app_feedback FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can update their own feedback"
+  ON app_feedback FOR UPDATE
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own feedback"
+  ON app_feedback FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════
+-- Upvotes
+-- ═══════════════════════════════════════════
+CREATE TABLE app_upvotes (
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  submission_id UUID NOT NULL REFERENCES app_submissions(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ DEFAULT now(),
+  PRIMARY KEY (user_id, submission_id)
+);
+
+ALTER TABLE app_upvotes ENABLE ROW LEVEL SECURITY;
+
+CREATE POLICY "Upvotes are publicly readable"
+  ON app_upvotes FOR SELECT USING (true);
+
+CREATE POLICY "Users can insert their own upvotes"
+  ON app_upvotes FOR INSERT
+  WITH CHECK (auth.uid() = user_id);
+
+CREATE POLICY "Users can delete their own upvotes"
+  ON app_upvotes FOR DELETE
+  USING (auth.uid() = user_id);
+
+-- ═══════════════════════════════════════════
+-- Helper RPC functions for atomic counter updates
+-- ═══════════════════════════════════════════
+CREATE OR REPLACE FUNCTION increment_feedback_count(row_id UUID)
+RETURNS void AS $$
+  UPDATE app_submissions SET feedback_count = feedback_count + 1 WHERE id = row_id;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION decrement_feedback_count(row_id UUID)
+RETURNS void AS $$
+  UPDATE app_submissions SET feedback_count = GREATEST(feedback_count - 1, 0) WHERE id = row_id;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION increment_upvotes(row_id UUID)
+RETURNS INT AS $$
+  UPDATE app_submissions SET upvotes = upvotes + 1 WHERE id = row_id
+  RETURNING upvotes;
+$$ LANGUAGE sql SECURITY DEFINER;
+
+CREATE OR REPLACE FUNCTION decrement_upvotes(row_id UUID)
+RETURNS INT AS $$
+  UPDATE app_submissions SET upvotes = GREATEST(upvotes - 1, 0) WHERE id = row_id
+  RETURNING upvotes;
+$$ LANGUAGE sql SECURITY DEFINER;
+```
+
+### 7. Enable Realtime for Presence
+
+1. Go to **Database → Replication** in the Supabase dashboard
+2. Realtime is enabled by default for presence channels — no extra config needed
+3. The community pages use Supabase Realtime Presence to show live online user count

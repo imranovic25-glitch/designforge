@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+
+# Block legal/utility pages from indexing
+Disallow: /api/
+
+# Sitemap location
+Sitemap: https://www.designforge360.com/sitemap.xml

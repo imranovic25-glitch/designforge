@@ -1,0 +1,40 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, SFMono-Regular, monospace;
+}
+
+@layer base {
+  :root {
+    --bg-base: #000000;
+    --bg-surface: #0a0a0a;
+    --bg-surface-hover: #141414;
+    --ink-primary: #ffffff;
+    --ink-secondary: #a1a1aa;
+    --ink-tertiary: #52525b;
+    --border-subtle: rgba(255, 255, 255, 0.1);
+    --border-strong: rgba(255, 255, 255, 0.2);
+    --accent-glow: rgba(255, 255, 255, 0.15);
+  }
+
+  body {
+    @apply bg-[var(--bg-base)] text-[var(--ink-primary)] font-sans antialiased selection:bg-white/30 selection:text-white;
+  }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply bg-white/[0.02] backdrop-blur-xl border border-[var(--border-subtle)] shadow-[0_8px_32px_rgba(0,0,0,0.4)];
+  }
+  
+  .premium-gradient-text {
+    @apply bg-clip-text text-transparent bg-gradient-to-b from-white to-white/50;
+  }
+
+  .premium-glow {
+    box-shadow: 0 0 80px -20px var(--accent-glow);
+  }
+}
