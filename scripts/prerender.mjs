@@ -121,6 +121,11 @@ async function renderRoute(browser, route) {
     }
   });
 
+  /* Skip the LogoIntro animation during prerender */
+  await page.evaluateOnNewDocument(() => {
+    localStorage.setItem("df360_intro_seen", "1");
+  });
+
   try {
     await page.goto(`${ORIGIN}${route}`, {
       waitUntil: "networkidle2",

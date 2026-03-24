@@ -642,7 +642,7 @@ const POPULAR_LINKS = [
 
 export function Home() {
   const [showIntro, setShowIntro] = useState(() => {
-    try { return !sessionStorage.getItem("df-intro-done"); } catch { return false; }
+    try { return !localStorage.getItem("df360_intro_seen"); } catch { return false; }
   });
 
   const navigate = useNavigate();
@@ -657,7 +657,6 @@ export function Home() {
     : [];
 
   function handleIntroDone() {
-    try { sessionStorage.setItem("df-intro-done", "1"); } catch { /* */ }
     setShowIntro(false);
   }
 
