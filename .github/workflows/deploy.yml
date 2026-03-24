@@ -31,12 +31,16 @@ jobs:
         run: npm run build
 
       - name: Deploy via SFTP
-        uses: wlixcc/SFTP-Deploy-Action@v1.2.4
-        with:
-          server: ${{ secrets.FTP_HOST }}
-          username: ${{ secrets.FTP_USERNAME }}
-          password: ${{ secrets.FTP_PASSWORD }}
-          port: 25141
-          local_path: ./dist/*
-          remote_path: /home/designfo/public_html
-          sftpArgs: '-o ConnectTimeout=10'
+        run: |
+          sudo apt-get install -y lftp
+          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" sftp://${{ secrets.FTP_HOST }}:25141 << 'LFTP'
+          set sftp:auto-confirm yes
+          set net:timeout 30
+          set net:max-retries 3
+          set net:reconnect-interval-base 5
+          mirror -R --delete --no-perms --verbose \
+            --exclude ^\.git \
+            --exclude ^cgi-bin \
+            ./dist/ /home/designfo/public_html/
+          quit
+          LFTP
