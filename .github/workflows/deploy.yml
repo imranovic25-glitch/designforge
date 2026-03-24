@@ -95,7 +95,6 @@ jobs:
           echo "---- CHECK ----"
           ls
           ls assets
-          ls assets/*.js
 
           quit
           EOF
