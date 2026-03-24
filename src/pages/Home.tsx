@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowRight, Search, Image as ImageIcon, FileArchive, FilePlus2, ArrowLeftRight, TrendingUp, Landmark, ArrowUpRight, Users, MessageSquare, Rocket, Check } from "lucide-react";
 import { motion, useInView } from "motion/react";
 import { LiquidHero, LiquidDrops, LiquidRipple } from "@/src/components/effects/LiquidHero";
-import { LogoIntro } from "@/src/components/effects/LogoIntro";
 import { SEOHead } from "@/src/components/seo/SEOHead";
 
 /* ─── Micro-visualization components ─────────────────────────────── */
@@ -653,10 +652,6 @@ const POPULAR_LINKS = [
 ];
 
 export function Home() {
-  const [showIntro, setShowIntro] = useState(() => {
-    try { return !sessionStorage.getItem("df360_intro_seen"); } catch { return false; }
-  });
-
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchOpen, setSearchOpen] = useState(false);
@@ -667,10 +662,6 @@ export function Home() {
         t.category.toLowerCase().includes(searchQuery.toLowerCase())
       )
     : [];
-
-  function handleIntroDone() {
-    setShowIntro(false);
-  }
 
   const containerVariants = {
     hidden: { opacity: 0 },
@@ -703,8 +694,6 @@ export function Home() {
         schema="WebSite"
         noSuffix
       />
-      {showIntro && <LogoIntro onDone={handleIntroDone} />}
-
       {/* ═══ Hero Section — Cinematic Camera-Focus Entrance ═══════════ */}
       <motion.section
         initial={{ scale: 1.12, opacity: 0, filter: "blur(6px)" }}

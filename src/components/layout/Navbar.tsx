@@ -14,12 +14,6 @@ export function Navbar() {
   const location = useLocation();
   const { user, signOut } = useAuth();
 
-  // On first visit, delay entry so the navbar slides in as LogoIntro fades out.
-  // On repeat visits, no delay — a fast slide-down plays on every page load.
-  const [introDelay] = useState(() => {
-    try { return !sessionStorage.getItem("df360_intro_seen") ? 1.25 : 0; } catch { return 0; }
-  });
-
   useEffect(() => {
     const saved = window.localStorage.getItem("df_theme");
     const initial = saved === "light" ? "light" : "dark";
@@ -62,7 +56,7 @@ export function Navbar() {
     <motion.header
       initial={{ opacity: 0, y: -16 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: introDelay }}
+      transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1], delay: 0.2 }}
       className={cn(
         "fixed top-0 z-50 w-full transition-all duration-300 ease-in-out",
         scrolled 
