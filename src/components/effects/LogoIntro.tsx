@@ -34,13 +34,13 @@ export function LogoIntro({ onDone }: { onDone: () => void }) {
   useEffect(() => {
     if (!mounted) return;
 
-    // Already seen — skip immediately
+    // Already seen this session — skip immediately
     try {
-      if (localStorage.getItem("df360_intro_seen")) {
+      if (sessionStorage.getItem("df360_intro_seen")) {
         finish();
         return;
       }
-    } catch { /* localStorage unavailable */ }
+    } catch { /* sessionStorage unavailable */ }
 
     const prev = document.body.style.overflow;
     document.body.style.overflow = "hidden";
@@ -96,20 +96,22 @@ export function LogoIntro({ onDone }: { onDone: () => void }) {
   function finish(prevOverflow?: string) {
     if (doneRef.current) return;
     doneRef.current = true;
-    try { localStorage.setItem("df360_intro_seen", "1"); } catch { /* */ }
+    try { sessionStorage.setItem("df360_intro_seen", "1"); } catch { /* */ }
     if (prevOverflow !== undefined) document.body.style.overflow = prevOverflow;
     document.body.removeAttribute("data-intro");
     document.body.setAttribute("data-intro", "0");
     onDone();
   }
 
-  // Client-only guard: render nothing during SSR / prerender
+  // Client-only guard: render nothing during SSR / prerender.
+  // Because of this guard, initial={{ opacity: 1 }} is safe — the overlay
+  // is never included in prerendered HTML, only rendered client-side.
   if (!mounted) return null;
 
   return createPortal(
     <motion.div
       animate={overlayCtrl}
-      initial={{ opacity: 0 }}
+      initial={{ opacity: 1 }}
       style={{ position: "fixed", inset: 0, zIndex: 99999, background: "black", display: "flex", alignItems: "center", justifyContent: "center" }}
     >
       {/* Soft glow behind the logo — stationary, fades with overlay */}

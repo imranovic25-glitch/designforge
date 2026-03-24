@@ -1,4 +1,4 @@
-import { ReactNode } from "react";
+import { ReactNode, useMemo } from "react";
 import { Link, useLocation } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
 import { ArrowRight } from "lucide-react";
@@ -6,6 +6,50 @@ import { RevealOnScroll } from "@/src/components/ui/RevealOnScroll";
 import { ReviewSection } from "@/src/components/ui/ReviewSection";
 
 const SITE_URL = "https://designforge360.in";
+
+/* ── Tool categories for "Related Tools" sidebar ──────────────────── */
+const TOOL_GROUPS: Record<string, { name: string; path: string }[]> = {
+  pdf: [
+    { name: "PDF Editor", path: "/tools/pdf-editor" },
+    { name: "PDF Compressor", path: "/tools/pdf-compressor" },
+    { name: "PDF Merger", path: "/tools/pdf-merger" },
+    { name: "PDF to Word", path: "/tools/pdf-to-word" },
+    { name: "Word to PDF", path: "/tools/word-to-pdf" },
+  ],
+  image: [
+    { name: "Background Remover", path: "/tools/background-remover" },
+    { name: "Image Compressor", path: "/tools/image-compressor" },
+    { name: "Image Resizer", path: "/tools/image-resizer" },
+    { name: "Image Converter", path: "/tools/image-converter" },
+    { name: "SVG to PNG", path: "/tools/svg-to-png" },
+  ],
+  finance: [
+    { name: "Loan / EMI Calculator", path: "/tools/loan-emi-calculator" },
+    { name: "Compound Interest", path: "/tools/compound-interest-calculator" },
+    { name: "Currency Converter", path: "/tools/currency-converter" },
+    { name: "Mortgage Calculator", path: "/tools/mortgage-calculator" },
+  ],
+  dev: [
+    { name: "JSON Formatter", path: "/tools/json-formatter" },
+    { name: "Markdown Preview", path: "/tools/markdown-preview" },
+    { name: "Password Generator", path: "/tools/password-generator" },
+    { name: "QR Code Generator", path: "/tools/qr-code-generator" },
+    { name: "Word Counter", path: "/tools/word-counter" },
+    { name: "Color Palette", path: "/tools/color-palette-generator" },
+    { name: "Resume Builder", path: "/tools/resume-builder" },
+    { name: "SEO Audit", path: "/tools/seo-audit" },
+    { name: "Clipboard Manager", path: "/tools/clipboard-manager" },
+  ],
+};
+
+function getRelatedTools(currentPath: string) {
+  for (const tools of Object.values(TOOL_GROUPS)) {
+    if (tools.some((t) => t.path === currentPath)) {
+      return tools.filter((t) => t.path !== currentPath).slice(0, 4);
+    }
+  }
+  return [];
+}
 
 interface ToolLayoutProps {
   title: string;
@@ -22,6 +66,7 @@ interface ToolLayoutProps {
 export function ToolLayout({ title, description, children, icon, toolSlug, faq, faqItems, relatedGuides, relatedComparisons }: ToolLayoutProps) {
   const faqData = faq ?? faqItems ?? [];
   const { pathname } = useLocation();
+  const relatedTools = useMemo(() => getRelatedTools(pathname), [pathname]);
 
   const breadcrumbSchema = {
     "@context": "https://schema.org",
@@ -122,6 +167,23 @@ export function ToolLayout({ title, description, children, icon, toolSlug, faq, 
                       <Link to={comp.path} className="text-base text-white hover:text-white/70 flex items-start group transition-colors">
                         <ArrowRight className="mr-3 h-5 w-5 text-white/30 group-hover:text-white transition-colors shrink-0 mt-0.5" />
                         <span className="leading-snug">{comp.title}</span>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Related Tools */}
+            {relatedTools.length > 0 && (
+              <div className="glass-panel rounded-3xl p-8">
+                <h3 className="text-sm font-semibold text-white/40 tracking-widest uppercase mb-6">Related Tools</h3>
+                <ul className="space-y-4">
+                  {relatedTools.map((tool, i) => (
+                    <li key={i}>
+                      <Link to={tool.path} className="text-base text-white hover:text-white/70 flex items-start group transition-colors">
+                        <ArrowRight className="mr-3 h-5 w-5 text-white/30 group-hover:text-white transition-colors shrink-0 mt-0.5" />
+                        <span className="leading-snug">{tool.name}</span>
                       </Link>
                     </li>
                   ))}

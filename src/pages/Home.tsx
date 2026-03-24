@@ -547,45 +547,57 @@ const ALL_TOOLS = [
 const TOOL_CATEGORIES = [
   {
     label: "PDF Tools", emoji: "📄",
+    accent: "from-blue-500/20 to-blue-500/0",
+    iconBg: "bg-blue-500/10 border-blue-500/20 text-blue-400",
+    hotBg: "bg-blue-400/10 text-blue-300 border-blue-400/20",
     tools: [
-      { name: "PDF Editor",     path: "/tools/pdf-editor",                 icon: "✏️", hot: true },
-      { name: "PDF Compressor", path: "/tools/pdf-compressor",             icon: "🗜️", hot: false },
-      { name: "PDF Merger",     path: "/tools/pdf-merger",                 icon: "📎", hot: false },
-      { name: "PDF to Word",    path: "/tools/pdf-to-word",                icon: "📝", hot: false },
-      { name: "Word to PDF",    path: "/tools/word-to-pdf",                icon: "🔄", hot: false },
+      { name: "PDF Editor",     path: "/tools/pdf-editor",     icon: "✏️", hot: true,  desc: "Edit text, images & pages" },
+      { name: "PDF Compressor", path: "/tools/pdf-compressor", icon: "🗜️", hot: false, desc: "Reduce file size up to 80%" },
+      { name: "PDF Merger",     path: "/tools/pdf-merger",     icon: "📎", hot: false, desc: "Combine multiple PDFs" },
+      { name: "PDF to Word",    path: "/tools/pdf-to-word",    icon: "📝", hot: false, desc: "Convert to editable DOCX" },
+      { name: "Word to PDF",    path: "/tools/word-to-pdf",    icon: "🔄", hot: false, desc: "DOCX to PDF instantly" },
     ],
   },
   {
     label: "Finance Tools", emoji: "💰",
+    accent: "from-emerald-500/20 to-emerald-500/0",
+    iconBg: "bg-emerald-500/10 border-emerald-500/20 text-emerald-400",
+    hotBg: "bg-emerald-400/10 text-emerald-300 border-emerald-400/20",
     tools: [
-      { name: "Loan / EMI Calculator",   path: "/tools/loan-emi-calculator",            icon: "🏦", hot: false },
-      { name: "Compound Interest",       path: "/tools/compound-interest-calculator",   icon: "📈", hot: false },
-      { name: "Currency Converter",      path: "/tools/currency-converter",             icon: "💱", hot: false },
-      { name: "Mortgage Calculator",     path: "/tools/mortgage-calculator",            icon: "🏠", hot: false },
+      { name: "Loan / EMI Calculator", path: "/tools/loan-emi-calculator",          icon: "🏦", hot: false, desc: "Calculate monthly payments" },
+      { name: "Compound Interest",     path: "/tools/compound-interest-calculator", icon: "📈", hot: false, desc: "Model investment growth" },
+      { name: "Currency Converter",    path: "/tools/currency-converter",           icon: "💱", hot: false, desc: "Live exchange rates" },
+      { name: "Mortgage Calculator",   path: "/tools/mortgage-calculator",          icon: "🏠", hot: false, desc: "Plan your home loan" },
     ],
   },
   {
     label: "Image Tools", emoji: "🖼️",
+    accent: "from-violet-500/20 to-violet-500/0",
+    iconBg: "bg-violet-500/10 border-violet-500/20 text-violet-400",
+    hotBg: "bg-violet-400/10 text-violet-300 border-violet-400/20",
     tools: [
-      { name: "Background Remover", path: "/tools/background-remover",  icon: "✂️", hot: true },
-      { name: "Image Compressor",   path: "/tools/image-compressor",    icon: "🗜️", hot: false },
-      { name: "Image Resizer",      path: "/tools/image-resizer",       icon: "📐", hot: false },
-      { name: "Image Converter",    path: "/tools/image-converter",     icon: "🔄", hot: false },
-      { name: "SVG to PNG",         path: "/tools/svg-to-png",          icon: "🎨", hot: false },
+      { name: "Background Remover", path: "/tools/background-remover",  icon: "✂️", hot: true,  desc: "AI-powered removal" },
+      { name: "Image Compressor",   path: "/tools/image-compressor",    icon: "🗜️", hot: false, desc: "Shrink without quality loss" },
+      { name: "Image Resizer",      path: "/tools/image-resizer",       icon: "📐", hot: false, desc: "Resize to any dimension" },
+      { name: "Image Converter",    path: "/tools/image-converter",     icon: "🔄", hot: false, desc: "PNG, JPG, WebP & more" },
+      { name: "SVG to PNG",         path: "/tools/svg-to-png",          icon: "🎨", hot: false, desc: "Vector to raster export" },
     ],
   },
   {
-    label: "Developer & Utility Tools", emoji: "⚙️",
+    label: "Developer & Utility", emoji: "⚙️",
+    accent: "from-amber-500/20 to-amber-500/0",
+    iconBg: "bg-amber-500/10 border-amber-500/20 text-amber-400",
+    hotBg: "bg-amber-400/10 text-amber-300 border-amber-400/20",
     tools: [
-      { name: "JSON Formatter",      path: "/tools/json-formatter",          icon: "{ }", hot: false },
-      { name: "Markdown Preview",    path: "/tools/markdown-preview",        icon: "📋", hot: false },
-      { name: "Password Generator",  path: "/tools/password-generator",      icon: "🔑", hot: false },
-      { name: "QR Code Generator",   path: "/tools/qr-code-generator",       icon: "▦",  hot: false },
-      { name: "Word Counter",        path: "/tools/word-counter",            icon: "📊", hot: false },
-      { name: "Color Palette",       path: "/tools/color-palette-generator", icon: "🎨", hot: false },
-      { name: "Resume Builder",      path: "/tools/resume-builder",          icon: "📄", hot: false },
-      { name: "SEO Audit",           path: "/tools/seo-audit",               icon: "🔍", hot: false },
-      { name: "Clipboard Manager",   path: "/tools/clipboard-manager",       icon: "📋", hot: false },
+      { name: "JSON Formatter",     path: "/tools/json-formatter",          icon: "{ }", hot: false, desc: "Beautify & validate JSON" },
+      { name: "Markdown Preview",   path: "/tools/markdown-preview",        icon: "📋", hot: false, desc: "Live rendered preview" },
+      { name: "Password Generator", path: "/tools/password-generator",      icon: "🔑", hot: false, desc: "Strong & secure passwords" },
+      { name: "QR Code Generator",  path: "/tools/qr-code-generator",      icon: "▦",  hot: false, desc: "Create custom QR codes" },
+      { name: "Word Counter",       path: "/tools/word-counter",            icon: "📊", hot: false, desc: "Count words & characters" },
+      { name: "Color Palette",      path: "/tools/color-palette-generator", icon: "🎨", hot: false, desc: "Generate color schemes" },
+      { name: "Resume Builder",     path: "/tools/resume-builder",          icon: "📄", hot: false, desc: "Build professional CVs" },
+      { name: "SEO Audit",          path: "/tools/seo-audit",               icon: "🔍", hot: false, desc: "Analyze page performance" },
+      { name: "Clipboard Manager",  path: "/tools/clipboard-manager",       icon: "📋", hot: false, desc: "Save & organize clips" },
     ],
   },
 ];
@@ -642,7 +654,7 @@ const POPULAR_LINKS = [
 
 export function Home() {
   const [showIntro, setShowIntro] = useState(() => {
-    try { return !localStorage.getItem("df360_intro_seen"); } catch { return false; }
+    try { return !sessionStorage.getItem("df360_intro_seen"); } catch { return false; }
   });
 
   const navigate = useNavigate();
@@ -991,35 +1003,74 @@ export function Home() {
       </section>
 
       {/* ═══ All Tools Grid ═══════════════════════════════════════════════ */}
-      <section id="all-tools" className="py-24 border-t border-white/5">
-        <div className="container mx-auto px-6 lg:px-12">
-          <div className="text-center mb-14">
-            <h2 className="text-4xl md:text-5xl font-semibold text-white tracking-tight mb-4">Explore 20+ Free Tools</h2>
-            <p className="text-lg text-white/45 font-light max-w-xl mx-auto">Every tool runs in your browser — instant, free, no account needed.</p>
+      <section id="all-tools" className="py-28 border-t border-white/5">
+        <div className="container mx-auto px-6 lg:px-12 max-w-7xl">
+          {/* Section header */}
+          <div className="text-center mb-20">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/[0.04] border border-white/[0.08] text-xs text-white/50 font-medium tracking-wide uppercase mb-6">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+              All tools free — no signup
+            </div>
+            <h2 className="text-4xl md:text-5xl lg:text-6xl font-semibold text-white tracking-tight mb-5">
+              Everything you need,<br className="hidden sm:block" /> in one place
+            </h2>
+            <p className="text-lg text-white/40 font-light max-w-2xl mx-auto leading-relaxed">
+              Professional-grade tools that run entirely in your browser. Pick a category or jump straight to the tool you need.
+            </p>
           </div>
-          <div className="space-y-10">
-            {TOOL_CATEGORIES.map((cat) => (
-              <div key={cat.label}>
-                <div className="flex items-center gap-3 mb-4">
-                  <span className="text-xl">{cat.emoji}</span>
-                  <h3 className="text-base font-semibold text-white">{cat.label}</h3>
-                  <div className="flex-1 h-px bg-white/[0.06]" />
+
+          {/* Category blocks */}
+          <div className="space-y-6">
+            {TOOL_CATEGORIES.map((cat, catIdx) => (
+              <motion.div
+                key={cat.label}
+                initial={{ opacity: 0, y: 24 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true, margin: "-60px" }}
+                transition={{ duration: 0.5, delay: catIdx * 0.08 }}
+                className="rounded-2xl border border-white/[0.06] bg-white/[0.02] overflow-hidden"
+              >
+                {/* Category header */}
+                <div className={`px-6 py-4 bg-gradient-to-r ${cat.accent} flex items-center gap-3 border-b border-white/[0.05]`}>
+                  <div className={`w-8 h-8 rounded-lg border flex items-center justify-center text-sm ${cat.iconBg}`}>
+                    {cat.emoji}
+                  </div>
+                  <h3 className="text-sm font-semibold text-white tracking-wide">{cat.label}</h3>
+                  <span className="text-xs text-white/30 ml-1">{cat.tools.length} tools</span>
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2.5">
+
+                {/* Tools grid */}
+                <div className="p-3 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-2">
                   {cat.tools.map((tool) => (
-                    <Link key={tool.path} to={tool.path}
-                      className="group flex items-center gap-2.5 px-4 py-3 rounded-xl bg-white/[0.03] border border-white/[0.06] hover:bg-white/[0.07] hover:border-white/[0.15] transition-all duration-200">
-                      <span className="text-base flex-shrink-0">{tool.icon}</span>
-                      <span className="text-sm font-medium text-white/65 group-hover:text-white transition-colors truncate">{tool.name}</span>
-                      {tool.hot && <span className="ml-auto flex-shrink-0 text-[8px] font-bold text-orange-400 bg-orange-500/10 border border-orange-500/20 px-1.5 py-0.5 rounded-full">HOT</span>}
+                    <Link
+                      key={tool.path}
+                      to={tool.path}
+                      className="group relative flex flex-col gap-1.5 px-4 py-3.5 rounded-xl bg-transparent hover:bg-white/[0.05] transition-all duration-200"
+                    >
+                      <div className="flex items-center gap-2.5">
+                        <span className="text-base flex-shrink-0">{tool.icon}</span>
+                        <span className="text-[13px] font-medium text-white/80 group-hover:text-white transition-colors truncate">{tool.name}</span>
+                        {tool.hot && (
+                          <span className={`ml-auto flex-shrink-0 text-[9px] font-bold px-1.5 py-0.5 rounded-md border ${cat.hotBg}`}>
+                            POPULAR
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-[11px] text-white/30 group-hover:text-white/45 transition-colors pl-[26px] leading-relaxed">{tool.desc}</p>
+                      <ArrowRight className="absolute right-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-white/0 group-hover:text-white/30 transition-all duration-200 group-hover:translate-x-0.5" />
                     </Link>
                   ))}
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
-          <div className="text-center mt-10">
-            <Link to="/tools" className="inline-flex items-center gap-2 text-sm text-white/40 hover:text-white/80 transition-colors">
+
+          {/* CTA */}
+          <div className="text-center mt-12">
+            <Link
+              to="/tools"
+              className="inline-flex items-center gap-2.5 px-6 py-3 rounded-full bg-white/[0.05] border border-white/[0.1] text-sm font-medium text-white/60 hover:text-white hover:bg-white/[0.08] hover:border-white/[0.2] transition-all duration-300"
+            >
               View complete tools directory <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
