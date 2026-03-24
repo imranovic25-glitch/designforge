@@ -39,36 +39,56 @@ jobs:
           echo "---"
           ls dist/assets/ | head -20
 
-      - name: Find correct remote path
+      - name: Find correct deploy path
+        id: path
         run: |
           sudo apt-get install -y lftp
-          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" sftp://${{ secrets.FTP_HOST }}:25141 -e "
+          # Try both common DirectAdmin paths and find which one has content or exists
+          OUTPUT=$(lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" sftp://${{ secrets.FTP_HOST }}:25141 -e "
             set sftp:auto-confirm yes;
             set net:timeout 30;
-            echo '--- Home directory ---';
+            echo PROBE_START;
+            echo HOME_DIR;
+            pwd;
             ls;
-            echo '--- Check /home/designfo/ ---';
-            ls /home/designfo/ || echo 'not found';
-            echo '--- Check domains ---';
-            ls /home/designfo/domains/ || echo 'not found';
-            echo '--- Check domain public_html ---';
-            ls /home/designfo/domains/designforge360.in/public_html/ || echo 'not found';
-            echo '--- Check direct public_html ---';
-            ls /home/designfo/public_html/ || echo 'not found';
-            quit"
+            echo TRY_DOMAINS;
+            ls /home/designfo/domains/designforge360.in/public_html/ 2>&1 || echo DOMAINS_NOTFOUND;
+            echo TRY_DIRECT;
+            ls /home/designfo/public_html/ 2>&1 || echo DIRECT_NOTFOUND;
+            echo PROBE_END;
+            quit" 2>&1)
+          echo "$OUTPUT"
+          # Detect correct path
+          if echo "$OUTPUT" | grep -q "DOMAINS_NOTFOUND"; then
+            echo "DEPLOY_PATH=/home/designfo/public_html/" >> $GITHUB_OUTPUT
+            echo "Using /home/designfo/public_html/"
+          else
+            echo "DEPLOY_PATH=/home/designfo/domains/designforge360.in/public_html/" >> $GITHUB_OUTPUT
+            echo "Using /home/designfo/domains/designforge360.in/public_html/"
+          fi
 
       - name: Deploy via SFTP
         run: |
+          DEPLOY_PATH="${{ steps.path.outputs.DEPLOY_PATH }}"
+          echo "Deploying to: $DEPLOY_PATH"
+          echo "Local dist contents:"
+          ls -la dist/
+          echo "---"
+          # Upload without --delete first to ensure files land
           lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" sftp://${{ secrets.FTP_HOST }}:25141 -e "
             set sftp:auto-confirm yes;
-            set net:timeout 30;
-            set net:max-retries 3;
+            set net:timeout 60;
+            set net:max-retries 5;
+            set net:reconnect-interval-base 5;
             set mirror:include-hidden yes;
-            mirror -R --delete --no-perms --verbose --exclude-glob .git --exclude-glob cgi-bin ./dist/ /home/designfo/domains/designforge360.in/public_html/;
-            echo '--- Deployed files ---';
-            ls /home/designfo/domains/designforge360.in/public_html/;
-            echo '--- Check .htaccess ---';
-            ls -la /home/designfo/domains/designforge360.in/public_html/.htaccess || echo '.htaccess MISSING';
-            echo '--- Check assets ---';
-            ls /home/designfo/domains/designforge360.in/public_html/assets/ | head -10;
+            set mirror:parallel-transfer-count 5;
+            mirror -R --no-perms --verbose --exclude-glob .git --exclude-glob cgi-bin ./dist/ $DEPLOY_PATH;
+            echo '--- Verify deployed files ---';
+            ls $DEPLOY_PATH;
+            echo '--- Verify .htaccess ---';
+            ls -la ${DEPLOY_PATH}.htaccess || echo HTACCESS_MISSING;
+            echo '--- Verify assets ---';
+            ls ${DEPLOY_PATH}assets/ | head -10;
+            echo '--- Verify index.html ---';
+            ls -la ${DEPLOY_PATH}index.html || echo INDEX_MISSING;
             quit"
