@@ -33,14 +33,11 @@ jobs:
       - name: Deploy via SFTP
         run: |
           sudo apt-get install -y lftp
-          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" sftp://${{ secrets.FTP_HOST }}:25141 << 'LFTP'
-          set sftp:auto-confirm yes
-          set net:timeout 30
-          set net:max-retries 3
-          set net:reconnect-interval-base 5
-          mirror -R --delete --no-perms --verbose \
-            --exclude ^\.git \
-            --exclude ^cgi-bin \
-            ./dist/ /home/designfo/public_html/
-          quit
-          LFTP
+          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" sftp://${{ secrets.FTP_HOST }}:25141 -e "
+            set sftp:auto-confirm yes;
+            set net:timeout 30;
+            set net:max-retries 3;
+            set mirror:include-hidden yes;
+            mirror -R --delete --no-perms --verbose --exclude-glob .git --exclude-glob .git/ ./dist/ /home/designfo/public_html/;
+            ls /home/designfo/public_html/;
+            quit"
