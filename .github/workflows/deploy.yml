@@ -67,28 +67,35 @@ jobs:
             echo "Using /home/designfo/domains/designforge360.in/public_html/"
           fi
 
-      - name: Deploy via SFTP
+      - name: Deploy via SFTP (fixed)
         run: |
           DEPLOY_PATH="${{ steps.path.outputs.DEPLOY_PATH }}"
           echo "Deploying to: $DEPLOY_PATH"
-          echo "Local dist contents:"
-          ls -la dist/
-          echo "---"
-          # Upload without --delete first to ensure files land
-          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" sftp://${{ secrets.FTP_HOST }}:25141 -e "
-            set sftp:auto-confirm yes;
-            set net:timeout 60;
-            set net:max-retries 5;
-            set net:reconnect-interval-base 5;
-            set mirror:include-hidden yes;
-            set mirror:parallel-transfer-count 5;
-            mirror -R --no-perms --verbose --exclude-glob .git --exclude-glob cgi-bin ./dist/ $DEPLOY_PATH;
-            echo '--- Verify deployed files ---';
-            ls $DEPLOY_PATH;
-            echo '--- Verify .htaccess ---';
-            ls -la ${DEPLOY_PATH}.htaccess || echo HTACCESS_MISSING;
-            echo '--- Verify assets ---';
-            ls ${DEPLOY_PATH}assets/ | head -10;
-            echo '--- Verify index.html ---';
-            ls -la ${DEPLOY_PATH}index.html || echo INDEX_MISSING;
-            quit"
+
+          sudo apt-get install -y lftp
+
+          lftp -u "${{ secrets.FTP_USERNAME }},${{ secrets.FTP_PASSWORD }}" sftp://${{ secrets.FTP_HOST }}:25141 <<EOF
+          set sftp:auto-confirm yes
+          set net:max-retries 10
+          set net:timeout 60
+
+          cd $DEPLOY_PATH
+
+          # REMOVE OLD FILES
+          rm -rf assets
+          rm -rf tools
+          rm -rf guides
+          rm -rf comparisons
+          rm -f index.html
+
+          # UPLOAD NEW BUILD
+          mirror -R ./dist .
+
+          # VERIFY
+          echo "---- CHECK ----"
+          ls
+          ls assets
+          ls assets/*.js
+
+          quit
+          EOF
