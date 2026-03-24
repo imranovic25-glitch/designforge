@@ -30,14 +30,16 @@ jobs:
           EXCHANGERATE_API_KEY: ${{ secrets.EXCHANGERATE_API_KEY }}
         run: npm run build
 
-      - name: Deploy via FTP
+      - name: Deploy via SFTP
         uses: SamKirkland/FTP-Deploy-Action@v4.3.4
         with:
           server: ${{ secrets.FTP_HOST }}
           username: ${{ secrets.FTP_USERNAME }}
           password: ${{ secrets.FTP_PASSWORD }}
+          protocol: sftp
+          port: 25141
           local-dir: ./dist/
-          server-dir: ./
+          server-dir: ./public_html/
           exclude: |
             **/.git*
             **/.git*/**
